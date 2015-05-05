@@ -26,7 +26,7 @@ public class Sockserver
         while (true)
         {
             Socket sock = serverSocket.accept();
-            new ImageClient (sock);
+            new Client (sock);
         }
     }
 }

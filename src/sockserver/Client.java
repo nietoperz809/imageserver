@@ -9,6 +9,7 @@
 package sockserver;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -46,6 +47,11 @@ public class Client implements Runnable
         out.print (txt);
     }
     
+    private String[] getInput (BufferedReader in) throws IOException
+    {
+        return in.readLine().split (" ");
+    }
+    
     private void naked (PrintWriter out, String txt)
     {
         sendHeader (out, txt, "text/text");
@@ -59,8 +65,18 @@ public class Client implements Runnable
                 PrintWriter out
                 = new PrintWriter(m_sock.getOutputStream(), true);)
         {
-            System.out.println(in.readLine());
-            html (out, "hello wÖrldx");
+            String[] si = getInput(in);
+            System.out.println(si[1]);
+            switch (si[1])
+            {
+                case "/":
+                html (out, "hello wÖrldx");
+                break;
+                    
+                case "/stop":
+                System.exit(0);
+                break;
+            }
         }
     }
 
