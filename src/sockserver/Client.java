@@ -1,3 +1,6 @@
+
+
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -20,22 +23,10 @@ public class Client implements Runnable
 {
     Socket m_sock;
     Thread m_thread;
-    BufferedReader m_in;
-    PrintWriter m_out;
     
     public Client(Socket s)
     {
         m_sock = s;
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(m_sock.getInputStream()));
-            PrintWriter out = new PrintWriter(m_sock.getOutputStream(), true);)
-        {
-            m_in = in;
-            m_out = out;
-        }
-        catch (Exception ex)
-        {
-            
-        }
         m_thread = new Thread(this);
         m_thread.start();
     }
@@ -48,7 +39,7 @@ public class Client implements Runnable
         out.println ();
     }
     
-    private void html (PrintWriter out, String txt)
+    protected void html (PrintWriter out, String txt)
     {
         txt = "<html>"+txt+"</html>";
         sendHeader (out, txt, "text/html");

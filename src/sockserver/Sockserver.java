@@ -5,9 +5,6 @@
  */
 package sockserver;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -29,7 +26,7 @@ public class Sockserver
         while (true)
         {
             Socket sock = serverSocket.accept();
-            new Client (sock);
+            new ImageClient (sock);
         }
     }
 }
