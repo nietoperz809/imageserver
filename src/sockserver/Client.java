@@ -3,15 +3,17 @@ package sockserver;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import static sockserver.Sockserver.pStr;
+import static sockserver.Sockserver.PATH;
 
 /**
  *
@@ -46,7 +48,7 @@ public class Client implements Runnable
 
     protected String listFiles()
     {
-        File f = new File(Sockserver.PATH);
+        File f = new File(Sockserver.PATH.toString());
         StringBuilder sb = new StringBuilder();
         File[] fils = f.listFiles();
 
@@ -84,7 +86,7 @@ public class Client implements Runnable
      */
     private void sendJpeg(OutputStream out, String fname)
     {
-        File f = new File(Sockserver.PATH + fname);
+        File f = new File(Sockserver.PATH.toString() + "/"+ fname);
         System.out.println("send: " + Sockserver.PATH + fname);
         PrintWriter w = new PrintWriter(out);
         w.println("HTTP/1.1 200 OK");
@@ -111,7 +113,7 @@ public class Client implements Runnable
      *
      * @param out Print Writer
      */
-    protected void imagePage(PrintWriter out)
+    private void imagePage(PrintWriter out)
     {
         String txt = "<html>\r\n" + listFiles() + "</html>";
         sendHeader(out, txt, "text/html");
@@ -147,6 +149,8 @@ public class Client implements Runnable
                 = new PrintWriter(m_sock.getOutputStream(), true);)
         {
             String[] si = getInput(in);
+            if (si == null)
+                return;
             System.out.println(si[1]);
             switch (si[1])
             {
@@ -160,10 +164,21 @@ public class Client implements Runnable
 
                 default:
                     String fname = si[1].substring(1);
-                    if (fname.startsWith("LINK*"))
+                    if (fname.startsWith("BACK*"))
                     {
-                        Sockserver.PATH = Sockserver.PATH + fname.substring(5) + "/";
-                        System.out.println(Sockserver.PATH);
+                        Path ph = Sockserver.PATH.getParent();
+                        if (ph != null)
+                            Sockserver.PATH = ph;
+                        imagePage(out);
+                    }
+                    else if (fname.startsWith("LINK*"))
+                    {
+                        Sockserver.PATH = Paths.get(Sockserver.PATH.toString(),fname.substring(5));
+                        imagePage(out);
+                    }
+                    else if (fname.startsWith("reset"))
+                    {
+                        PATH = Paths.get(pStr);
                         imagePage(out);
                     }
                     else

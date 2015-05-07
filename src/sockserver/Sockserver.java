@@ -5,8 +5,11 @@
  */
 package sockserver;
 
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  *
@@ -14,9 +17,22 @@ import java.net.Socket;
  */
 public class Sockserver
 {
-    public static String PATH = "F:\\pron\\010\\010/";
+    public static final String pStr = "F:\\pron\\010\\010/";
+    public static Path PATH = Paths.get(pStr);
+ 
+    private static void pTest()
+    {
+        Path path = Paths.get("F:\\pron\\010\\010/");  // create
+        System.out.println(path.toString());
+        
+        path = path.getParent();   // remove last elem
+        System.out.println(path.toString());
+        
+        path = Paths.get(path.toString(), "hello");  // add elem
+        System.out.println(path.toString());
+    }
     
-    public static void main(String[] args) throws Exception
+    private static void startServer() throws Exception
     {
         ServerSocket serverSocket = new ServerSocket(80);
         
@@ -25,5 +41,11 @@ public class Sockserver
             Socket sock = serverSocket.accept();
             new Client (sock);
         }
+    }
+    
+    public static void main(String[] args) throws Exception
+    {
+        //pTest();
+        startServer();
     }
 }
