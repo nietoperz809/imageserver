@@ -1,6 +1,8 @@
 package sockserver;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -12,6 +14,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
 import static sockserver.Sockserver.pStr;
 import static sockserver.Sockserver.PATH;
 
@@ -29,6 +35,22 @@ public class Client implements Runnable
         m_sock = s;
         m_thread = new Thread(this);
         m_thread.start();
+    }
+
+    private byte[] reduceImg(String path) throws Exception
+    {
+        BufferedImage image = ImageIO.read(new File(path));
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ImageWriter writer = (ImageWriter) ImageIO.getImageWritersByFormatName("jpeg").next();
+
+        ImageWriteParam param = writer.getDefaultWriteParam();
+        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+        param.setCompressionQuality(0.2f); // Change this, float between 0.0 and 1.0
+
+        writer.setOutput(ImageIO.createImageOutputStream(os));
+        writer.write(null, new IIOImage(image, null, null), param);
+        writer.dispose();
+        return os.toByteArray();
     }
 
     private void sendHeader(PrintWriter out, String txt, String type)
@@ -86,7 +108,7 @@ public class Client implements Runnable
      */
     private void sendJpeg(OutputStream out, String fname)
     {
-        File f = new File(Sockserver.PATH.toString() + "/"+ fname);
+        File f = new File(Sockserver.PATH.toString() + "/" + fname);
         System.out.println("send: " + Sockserver.PATH + fname);
         PrintWriter w = new PrintWriter(out);
         w.println("HTTP/1.1 200 OK");
@@ -150,7 +172,9 @@ public class Client implements Runnable
         {
             String[] si = getInput(in);
             if (si == null)
+            {
                 return;
+            }
             System.out.println(si[1]);
             switch (si[1])
             {
@@ -168,12 +192,14 @@ public class Client implements Runnable
                     {
                         Path ph = Sockserver.PATH.getParent();
                         if (ph != null)
+                        {
                             Sockserver.PATH = ph;
+                        }
                         imagePage(out);
                     }
                     else if (fname.startsWith("LINK*"))
                     {
-                        Sockserver.PATH = Paths.get(Sockserver.PATH.toString(),fname.substring(5));
+                        Sockserver.PATH = Paths.get(Sockserver.PATH.toString(), fname.substring(5));
                         imagePage(out);
                     }
                     else if (fname.startsWith("reset"))
