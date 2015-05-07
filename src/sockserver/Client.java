@@ -1,5 +1,6 @@
 package sockserver;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -14,10 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
 import static sockserver.Sockserver.pStr;
 import static sockserver.Sockserver.PATH;
 
@@ -37,22 +35,40 @@ public class Client implements Runnable
         m_thread.start();
     }
 
-    private byte[] reduceImg(String path) throws Exception
+    private BufferedImage resizeImage(BufferedImage originalImage)
     {
-        BufferedImage image = ImageIO.read(new File(path));
+        int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
+        BufferedImage resizedImage = new BufferedImage(100, 100, type);
+        Graphics2D g = resizedImage.createGraphics();
+        g.drawImage(originalImage, 0, 0, 100, 100, null);
+        g.dispose();
+        return resizedImage;
+    }
+
+    private byte[] reduceImg(File path) throws Exception
+    {
+        BufferedImage image = ImageIO.read(path);
+        BufferedImage i2 = resizeImage(image);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ImageWriter writer = (ImageWriter) ImageIO.getImageWritersByFormatName("jpeg").next();
-
-        ImageWriteParam param = writer.getDefaultWriteParam();
-        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(0.2f); // Change this, float between 0.0 and 1.0
-
-        writer.setOutput(ImageIO.createImageOutputStream(os));
-        writer.write(null, new IIOImage(image, null, null), param);
-        writer.dispose();
+        ImageIO.write(i2, "jpg", os);
         return os.toByteArray();
     }
 
+//    private byte[] reduceImg(File path) throws Exception
+//    {
+//        BufferedImage image = ImageIO.read(path);
+//        ByteArrayOutputStream os = new ByteArrayOutputStream();
+//        ImageWriter writer = (ImageWriter) ImageIO.getImageWritersByFormatName("jpeg").next();
+//
+//        ImageWriteParam param = writer.getDefaultWriteParam();
+//        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+//        param.setCompressionQuality(0.2f); // Change this, float between 0.0 and 1.0
+//
+//        writer.setOutput(ImageIO.createImageOutputStream(os));
+//        writer.write(null, new IIOImage(image, null, null), param);
+//        writer.dispose();
+//        return os.toByteArray();
+//    }
     private void sendHeader(PrintWriter out, String txt, String type)
     {
         out.println("HTTP/1.1 200 OK");
@@ -92,9 +108,12 @@ public class Client implements Runnable
             }
             else if (name.endsWith(".jpg"))
             {
-                sb.append("<img src=\"");
-                sb.append(name);
-                sb.append("\" alt=\"Smiley face\" height=\"256\" width=\"256\">\r\n");
+                sb.append ("<a href=\"");
+                sb.append ("*IMG*");
+                sb.append (name);
+                sb.append ("\" target=\"_blank\"><img src=\"");
+                sb.append (name);
+                sb.append ("\"></a>\r\n");
             }
         }
         return sb.toString();
@@ -106,22 +125,42 @@ public class Client implements Runnable
      * @param out output stream
      * @param fname file name
      */
-    private void sendJpeg(OutputStream out, String fname)
+    private void sendJpegSmall(OutputStream out, String fname)
     {
         File f = new File(Sockserver.PATH.toString() + "/" + fname);
-        System.out.println("send: " + Sockserver.PATH + fname);
         PrintWriter w = new PrintWriter(out);
-        w.println("HTTP/1.1 200 OK");
-        w.println("Content-Length: " + f.length());
-        w.println("Content-Type: image/jpeg");
-        w.println();
-        w.flush();
+        try
+        {
+            byte[] b = reduceImg(f);
+            w.println("HTTP/1.1 200 OK");
+            w.println("Content-Length: " + b.length);
+            w.println("Content-Type: image/jpeg");
+            w.println();
+            out.write(b);
+            w.flush();
+            out.flush();
+        }
+        catch (Exception ex)
+        {
+            //Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void sendJpegOriginal(OutputStream out, String fname)
+    {
+        File f = new File(Sockserver.PATH.toString() + "/" + fname);
+        PrintWriter w = new PrintWriter(out);
         try
         {
             InputStream input = new FileInputStream(f);
             byte[] b = new byte[(int) f.length()];
             input.read(b);
+            w.println("HTTP/1.1 200 OK");
+            w.println("Content-Length: " + b.length);
+            w.println("Content-Type: image/jpeg");
+            w.println();
             out.write(b);
+            w.flush();
             out.flush();
         }
         catch (Exception ex)
@@ -197,6 +236,10 @@ public class Client implements Runnable
                         }
                         imagePage(out);
                     }
+                    else if (fname.startsWith("*IMG*"))
+                    {
+                        sendJpegOriginal(m_sock.getOutputStream(), fname.substring(5));
+                    }
                     else if (fname.startsWith("LINK*"))
                     {
                         Sockserver.PATH = Paths.get(Sockserver.PATH.toString(), fname.substring(5));
@@ -209,8 +252,7 @@ public class Client implements Runnable
                     }
                     else
                     {
-                        sendJpeg(m_sock.getOutputStream(), fname);
-                        //image (new PrintWriter(System.out), fname);
+                        sendJpegSmall(m_sock.getOutputStream(), fname);
                     }
                     break;
 
