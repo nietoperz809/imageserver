@@ -14,14 +14,11 @@ import java.net.Socket;
  */
 public class Sockserver
 {
+    public static String PATH = "F:\\pron\\010\\010/";
+    
     public static void main(String[] args) throws Exception
     {
         ServerSocket serverSocket = new ServerSocket(80);
-//        Socket clientSocket = serverSocket.accept();
-//        PrintWriter out
-//                = new PrintWriter(clientSocket.getOutputStream(), true);
-//        BufferedReader in = new BufferedReader(
-//                new InputStreamReader(clientSocket.getInputStream()));
         
         while (true)
         {
