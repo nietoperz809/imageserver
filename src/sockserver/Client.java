@@ -11,8 +11,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -88,6 +90,7 @@ public class Client implements Runnable
     {
         File f = new File(Sockserver.PATH.toString());
         StringBuilder sb = new StringBuilder();
+        StringBuilder sb2 = new StringBuilder();
         File[] fils = f.listFiles();
 
         if (fils == null)
@@ -95,28 +98,47 @@ public class Client implements Runnable
             return "noone";
         }
 
-        sb.append("<a href=\"").append("BACK*").append("\">");
-        sb.append("*BACK*").append("</a>").append("</br>\r\n");
+        ArrayList<String> dirs = new ArrayList<>();
+
+        sb2.append("<a href=\"").append("BACK*").append("\">");
+        sb2.append("*BACK*").append("</a>").append("<hr>\r\n");
 
         for (int n = 0; n < fils.length; n++)
         {
             String name = fils[n].getName();
             if (fils[n].isDirectory())
             {
-                sb.append("<a href=\"").append("LINK*").append(name).append("\">");
-                sb.append(name).append("</a>").append("</br>\r\n");
+                dirs.add(name);
             }
             else if (name.endsWith(".jpg"))
             {
-                sb.append ("<a href=\"");
-                sb.append ("*IMG*");
-                sb.append (name);
-                sb.append ("\" target=\"_blank\"><img src=\"");
-                sb.append (name);
-                sb.append ("\"></a>\r\n");
+                sb.append("<a href=\"");
+                sb.append("*IMG*");
+                sb.append(URLEncoder.encode(name));
+                sb.append("\" target=\"_blank\"><img src=\"");
+                sb.append(name);
+                sb.append("\"></a>\r\n");
             }
         }
-        return sb.toString();
+        for (String dir : dirs)
+        {
+            sb2.append("<a href=\"").append("LINK*").append(URLEncoder.encode(dir)).append("\">");
+            sb2.append(dir).append("</a>").append("&nbsp;|&nbsp;\r\n");
+        }
+        sb2.append("<hr>");
+        sb2.append(sb);
+        return sb2.toString();
+    }
+
+    private void imgHead(PrintWriter w, int len)
+    {
+        w.println("HTTP/1.1 200 OK");
+        w.println("Content-Length: " + len);
+        w.println("Content-Type: image/jpeg");
+        w.println("Cache-Control: max-age=31536000, public");
+        //w.println("Expires: 06 Apr 2020 19:25:30 GMT");
+        w.println("Connection: close");
+        w.println();
     }
 
     /**
@@ -132,10 +154,7 @@ public class Client implements Runnable
         try
         {
             byte[] b = reduceImg(f);
-            w.println("HTTP/1.1 200 OK");
-            w.println("Content-Length: " + b.length);
-            w.println("Content-Type: image/jpeg");
-            w.println();
+            imgHead (w, b.length);
             out.write(b);
             w.flush();
             out.flush();
@@ -155,10 +174,7 @@ public class Client implements Runnable
             InputStream input = new FileInputStream(f);
             byte[] b = new byte[(int) f.length()];
             input.read(b);
-            w.println("HTTP/1.1 200 OK");
-            w.println("Content-Length: " + b.length);
-            w.println("Content-Type: image/jpeg");
-            w.println();
+            imgHead (w, b.length);
             out.write(b);
             w.flush();
             out.flush();
