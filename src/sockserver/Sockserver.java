@@ -5,7 +5,6 @@
  */
 package sockserver;
 
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
@@ -17,7 +16,7 @@ import java.nio.file.Paths;
  */
 public class Sockserver
 {
-    public static final String pStr = "F:\\pron\\010\\010/";
+    public static final String pStr = "F:\\";
     public static Path PATH = Paths.get(pStr);
  
     private static void pTest()

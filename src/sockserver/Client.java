@@ -1,9 +1,6 @@
 package sockserver;
 
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -17,12 +14,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import static sockserver.Sockserver.pStr;
-import static sockserver.Sockserver.PATH;
 
 /**
  *
@@ -48,51 +39,56 @@ public class Client implements Runnable
         out.println();
     }
 
-    protected void html(PrintWriter out, String txt)
+//    protected void html(PrintWriter out, String txt)
+//    {
+//        txt = "<html>" + txt + "</html>";
+//        sendHeader(out, txt, "text/html");
+//        out.print(txt);
+//    }
+    private String listFiles(String path)
     {
-        txt = "<html>" + txt + "</html>";
-        sendHeader(out, txt, "text/html");
-        out.print(txt);
-    }
-
-    protected String listFiles()
-    {
-        File f = new File(Sockserver.PATH.toString());
+        File f = new File(path);
         StringBuilder sb = new StringBuilder();
         StringBuilder sb2 = new StringBuilder();
         File[] fils = f.listFiles();
 
         if (fils == null)
         {
-            return "noone";
+            return "--- noone";
         }
 
         ArrayList<String> dirs = new ArrayList<>();
+        ArrayList<String> dirnames = new ArrayList<>();
 
-        sb2.append("<a href=\"").append("BACK*").append("\">");
-        sb2.append("*BACK*").append("</a>").append("<hr>\r\n");
-
+        Path pp = Paths.get(path).getParent();
+        if (pp != null)
+        {
+            sb2.append("<a href=\"").append(URLEncoder.encode(pp.toString())).append("\">");
+            sb2.append("*BACK*").append("</a>").append("<hr>\r\n");
+        }
         for (int n = 0; n < fils.length; n++)
         {
             String name = fils[n].getName();
+            Path p = Paths.get(path, name);
             if (fils[n].isDirectory())
             {
-                dirs.add(name);
+                dirs.add(p.toString());
+                dirnames.add(name);
             }
             else if (name.toLowerCase().endsWith(".jpg"))
             {
                 sb.append("<a href=\"");
                 sb.append("*IMG*");
-                sb.append(URLEncoder.encode(name));
+                sb.append(URLEncoder.encode(p.toString()));
                 sb.append("\" target=\"_blank\"><img src=\"");
-                sb.append(name);
+                sb.append(URLEncoder.encode(p.toString()));
                 sb.append("\"></a>\r\n");
             }
         }
-        for (String dir : dirs)
+        for (int n = 0; n < dirs.size(); n++)
         {
-            sb2.append("<a href=\"").append("LINK*").append(URLEncoder.encode(dir)).append("\">");
-            sb2.append(dir).append("</a>").append("&nbsp;|&nbsp;\r\n");
+            sb2.append("<a href=\"").append(URLEncoder.encode(dirs.get(n))).append("\">");
+            sb2.append(dirnames.get(n)).append("</a>").append("&nbsp;|&nbsp;\r\n");
         }
         sb2.append("<hr>");
         sb2.append(sb);
@@ -116,14 +112,14 @@ public class Client implements Runnable
      * @param out output stream
      * @param fname file name
      */
-    private void sendJpegSmall(OutputStream out, String fname)
+    private void sendJpegSmall(OutputStream out, String path)
     {
-        File f = new File(Sockserver.PATH.toString() + "/" + fname);
+        File f = new File(path);
         PrintWriter w = new PrintWriter(out);
         try
         {
             byte[] b = ImageTools.reduceImg(f, 0.2f);
-            imgHead (w, b.length);
+            imgHead(w, b.length);
             out.write(b);
             w.flush();
             out.flush();
@@ -136,14 +132,14 @@ public class Client implements Runnable
 
     private void sendJpegOriginal(OutputStream out, String fname)
     {
-        File f = new File(Sockserver.PATH.toString() + "/" + fname);
+        File f = new File(fname);
         PrintWriter w = new PrintWriter(out);
         try
         {
             InputStream input = new FileInputStream(f);
             byte[] b = new byte[(int) f.length()];
             input.read(b);
-            imgHead (w, b.length);
+            imgHead(w, b.length);
             out.write(b);
             w.flush();
             out.flush();
@@ -159,9 +155,9 @@ public class Client implements Runnable
      *
      * @param out Print Writer
      */
-    private void imagePage(PrintWriter out)
+    private void imagePage(PrintWriter out, String path)
     {
-        String txt = "<html>\r\n" + listFiles() + "</html>";
+        String txt = "<html>\r\n" + listFiles(path) + "</html>";
         sendHeader(out, txt, "text/html");
         out.print(txt);
     }
@@ -199,51 +195,22 @@ public class Client implements Runnable
             {
                 return;
             }
-            System.out.println(si[1]);
-            switch (si[1])
+            String path = si[1].substring(1);
+            System.out.println(path);
+            if (path.toLowerCase().endsWith(".jpg"))
             {
-                case "/":
-                    html(out, "hello wÖrldx");
-                    break;
-
-                case "/img":
-                    imagePage(out);
-                    break;
-
-                default:
-                    String fname = si[1].substring(1);
-                    if (fname.startsWith("BACK*"))
-                    {
-                        Path ph = Sockserver.PATH.getParent();
-                        if (ph != null)
-                        {
-                            Sockserver.PATH = ph;
-                        }
-                        imagePage(out);
-                    }
-                    else if (fname.startsWith("*IMG*"))
-                    {
-                        sendJpegOriginal(m_sock.getOutputStream(), fname.substring(5));
-                    }
-                    else if (fname.startsWith("LINK*"))
-                    {
-                        Sockserver.PATH = Paths.get(Sockserver.PATH.toString(), fname.substring(5));
-                        imagePage(out);
-                    }
-                    else if (fname.startsWith("reset"))
-                    {
-                        PATH = Paths.get(pStr);
-                        imagePage(out);
-                    }
-                    else
-                    {
-                        sendJpegSmall(m_sock.getOutputStream(), fname);
-                    }
-                    break;
-
-                case "/stop":
-                    System.exit(0);
-                    break;
+                if (path.startsWith("*IMG*"))
+                    sendJpegOriginal(m_sock.getOutputStream(), path.substring(5));
+                else
+                    sendJpegSmall(m_sock.getOutputStream(), path);
+            }
+            else
+            {
+                if (path.isEmpty())
+                {
+                    path = "F:\\";
+                }
+                imagePage(out, path);
             }
         }
     }
