@@ -40,42 +40,6 @@ public class Client implements Runnable
         m_thread.start();
     }
 
-    private BufferedImage resizeImage (BufferedImage originalImage, int b, int w)
-    {
-        int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
-        BufferedImage resizedImage = new BufferedImage(b, w, type);
-        Graphics2D g = resizedImage.createGraphics();
-        g.drawImage(originalImage, 0, 0, b, w, null);
-        g.dispose();
-        return resizedImage;
-    }
-
-//    private byte[] reduceImg(File path) throws Exception
-//    {
-//        BufferedImage image = ImageIO.read(path);
-//        BufferedImage i2 = resizeImage(image);
-//        ByteArrayOutputStream os = new ByteArrayOutputStream();
-//        ImageIO.write(i2, "jpg", os);
-//        return os.toByteArray();
-//    }
-
-    private byte[] reduceImg(File path) throws Exception
-    {
-        BufferedImage image = ImageIO.read(path);
-        image = resizeImage (image, 100, 100);
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ImageWriter writer = (ImageWriter) ImageIO.getImageWritersByFormatName("jpeg").next();
-
-        ImageWriteParam param = writer.getDefaultWriteParam();
-        param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(0.2f); // Change this, float between 0.0 and 1.0
-
-        writer.setOutput(ImageIO.createImageOutputStream(os));
-        writer.write(null, new IIOImage(image, null, null), param);
-        writer.dispose();
-        return os.toByteArray();
-    }
-    
     private void sendHeader(PrintWriter out, String txt, String type)
     {
         out.println("HTTP/1.1 200 OK");
@@ -158,7 +122,7 @@ public class Client implements Runnable
         PrintWriter w = new PrintWriter(out);
         try
         {
-            byte[] b = reduceImg(f);
+            byte[] b = ImageTools.reduceImg(f, 0.2f);
             imgHead (w, b.length);
             out.write(b);
             w.flush();
